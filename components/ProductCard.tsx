@@ -96,6 +96,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, isSa
                 </div>
             </div>
         </div>
+      </div>
     </div>
   );
 };
