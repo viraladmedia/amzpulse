@@ -1,0 +1,10 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# The following redirect rule is essential for Single Page Applications (SPAs).
+# It ensures that all paths are routed to index.html so React can handle the routing.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
