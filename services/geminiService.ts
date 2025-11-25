@@ -1,11 +1,29 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Product, AnalysisResult } from '../types';
 
-// Initialize GenAI client strictly using env var
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Safe initialization of GenAI client
+const getAiClient = () => {
+  try {
+    const key = process.env.API_KEY;
+    if (!key) {
+      console.warn("Gemini API Key is missing.");
+      return null;
+    }
+    return new GoogleGenAI({ apiKey: key });
+  } catch (error) {
+    console.error("Failed to initialize GenAI client:", error);
+    return null;
+  }
+};
+
+const ai = getAiClient();
 
 export const analyzeProductSellPotential = async (product: Product, userStats?: { buyCost: number, profit: number, roi: number }): Promise<AnalysisResult> => {
   try {
+    if (!ai) {
+      throw new Error("Gemini API client not initialized (Missing API Key)");
+    }
+
     // Construct specific context if user has used the calculator
     let financialContext = "";
     if (userStats) {
@@ -85,7 +103,7 @@ export const analyzeProductSellPotential = async (product: Product, userStats?: 
     return {
       grade: 'C',
       score: 50,
-      summary: "AI Analysis unavailable. Check connection.",
+      summary: "AI Analysis unavailable. Please check your API Key configuration.",
       fbaAnalysis: "Data unavailable",
       fbmAnalysis: "Data unavailable",
       pros: ["Stable BSR"],
