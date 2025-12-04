@@ -33,7 +33,7 @@ export const analyzeProductSellPotential = async (product: Product, userStats?: 
         - Potential Profit: $${userStats.profit}
         - ROI: ${userStats.roi}%
         
-        Please assume the user can source the product at $${userStats.buyCost}. Evaluate if this ROI is sufficient for the risk.
+        Evaluate if this ROI is sufficient given the risk profile.
         `;
     }
 
@@ -42,6 +42,7 @@ export const analyzeProductSellPotential = async (product: Product, userStats?: 
       
       Product Data:
       - Name: ${product.name}
+      - Brand: ${product.brand}
       - Category: ${product.category}
       - ASIN: ${product.asin}
       - Buy Box Price: $${product.price}
@@ -50,19 +51,19 @@ export const analyzeProductSellPotential = async (product: Product, userStats?: 
       - Number of Sellers: ${product.sellers}
       - FBA Fees: $${product.fbaFee + product.referralFee}
       - Reviews: ${product.rating} stars (${product.reviews} count)
-      - Weight/Dimensions: ${product.weight} / ${product.dimensions}
+      - Weight: ${product.weight}
+      - Hazmat Flag: ${product.isHazmat}
+      - IP Risk Flag: ${product.isIpRisk}
       
       ${financialContext}
 
       Provide a structured analysis:
-      1. Competition Analysis (Is the market saturated? Is BSR ${product.bsr} good for ${product.category}?).
-      2. Demand Velocity.
-      3. FBA Analysis: Is FBA viable considering fees and weight?
-      4. FBM Analysis: Is FBM viable considering shipping logistics vs Amazon fulfillment?
-      5. Pros/Cons.
-      6. Final Grade (A-F). 'A' requires high demand, good profit potential, low risk.
-      7. Score (0-100).
-      8. Strategy: Specific actionable advice.
+      1. Competition Analysis (Is the market saturated?).
+      2. Demand Velocity & Seasonality.
+      3. FBA vs FBM viability.
+      4. Risk Assessment (IP, Hazmat, Returns).
+      5. Final Grade (A-F).
+      6. Score (0-100).
     `;
 
     const response = await ai.models.generateContent({
@@ -78,13 +79,15 @@ export const analyzeProductSellPotential = async (product: Product, userStats?: 
             summary: { type: Type.STRING },
             fbaAnalysis: { type: Type.STRING, description: "Verdict on FBA viability" },
             fbmAnalysis: { type: Type.STRING, description: "Verdict on FBM viability" },
+            ipRiskAssessment: { type: Type.STRING, description: "Analysis of brand IP risk history" },
+            seasonalityInsight: { type: Type.STRING, description: "When does this sell best?" },
             pros: { type: Type.ARRAY, items: { type: Type.STRING } },
             cons: { type: Type.ARRAY, items: { type: Type.STRING } },
             competitionLevel: { type: Type.STRING, enum: ['Low', 'Medium', 'High'] },
             demandLevel: { type: Type.STRING, enum: ['Low', 'Medium', 'High'] },
             suggestedAction: { type: Type.STRING }
           },
-          required: ['grade', 'score', 'summary', 'fbaAnalysis', 'fbmAnalysis', 'pros', 'cons', 'competitionLevel', 'demandLevel', 'suggestedAction']
+          required: ['grade', 'score', 'summary', 'fbaAnalysis', 'fbmAnalysis', 'ipRiskAssessment', 'seasonalityInsight', 'pros', 'cons', 'competitionLevel', 'demandLevel', 'suggestedAction']
         }
       }
     });
@@ -99,13 +102,14 @@ export const analyzeProductSellPotential = async (product: Product, userStats?: 
 
   } catch (error) {
     console.error("Error analyzing product:", error);
-    // Fallback mock response if API fails or key is missing
     return {
       grade: 'C',
       score: 50,
-      summary: "AI Analysis unavailable. Please check your API Key configuration.",
+      summary: "AI Analysis unavailable. Check connection.",
       fbaAnalysis: "Data unavailable",
       fbmAnalysis: "Data unavailable",
+      ipRiskAssessment: "Unknown",
+      seasonalityInsight: "Unknown",
       pros: ["Stable BSR"],
       cons: ["Analysis failed"],
       competitionLevel: "Medium",

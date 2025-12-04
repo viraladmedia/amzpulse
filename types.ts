@@ -19,11 +19,14 @@ export interface AnalysisResult {
   suggestedAction: string;
   fbaAnalysis: string; // Specific verdict for FBA
   fbmAnalysis: string; // Specific verdict for FBM
+  ipRiskAssessment?: string; // New: AI verdict on IP risk
+  seasonalityInsight?: string; // New: AI verdict on seasonality
 }
 
 export interface Product {
   id: string;
   name: string;
+  brand: string; // New
   category: string;
   subCategory?: string;
   price: number;
@@ -31,21 +34,38 @@ export interface Product {
   rating: number;
   reviews: number;
   trend: number; // Percentage growth
-  size?: string;
   description: string;
   
   priceHistory: PricePoint[];
-  bsrHistory: RankPoint[]; // Added for Keepa-style charts
+  bsrHistory: RankPoint[];
   
   // Seller Amp / FBA Specifics
   asin: string;
-  bsr: number; // Current Best Sellers Rank
-  estimatedSales: number; // Monthly unit sales
-  fbaFee: number;
+  bsr: number;
+  estimatedSales: number;
+  
+  // Fees Breakdown
   referralFee: number;
+  fbaFee: number;
+  storageFee: number; // New
+  
+  // Specs
   weight: string;
   dimensions: string;
-  sellers: number; // Number of offers
+  sellers: number;
+  
+  // Risk Flags (New)
+  isHazmat: boolean;
+  isIpRisk: boolean;
+  isOversized: boolean;
+
+  // Seasonality (New)
+  seasonalityTags: ('Q1' | 'Q2' | 'Q3' | 'Q4' | 'Evergreen' | 'Summer' | 'Back to School')[];
+
+  // User Specific Data (Stored locally)
+  supplierUrl?: string;
+  targetRoi?: number;
+  notes?: string;
 
   analysis?: AnalysisResult;
 }
@@ -55,5 +75,10 @@ export interface FilterState {
   subCategory: string;
   minPrice: number;
   maxPrice: number;
+  minRoi: number; // New
+  maxBSR: number; // New
   search: string;
+  season?: string; // New
 }
+
+export type ViewMode = 'dashboard' | 'research' | 'batch' | 'watchlist' | 'settings';
