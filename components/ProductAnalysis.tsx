@@ -3,6 +3,7 @@ import { X, ShoppingCart, Activity, Copy, Save, RefreshCw, ShieldCheck, Trending
 import { Product, AnalysisResult } from '../types';
 import { analyzeProductSellPotential } from '../services/geminiService';
 import TrendChart from './TrendChart';
+import { fetchProduct as apiFetchProduct } from '../services/apiClient';
 
 interface ProductAnalysisProps {
   product: Product;
@@ -171,9 +172,27 @@ const ProductAnalysis: React.FC<ProductAnalysisProps> = ({ product, onClose, isS
                         <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-6">
                             <div className="flex justify-between items-center mb-4">
                                 <h3 className="text-white font-bold flex items-center gap-2"><Activity className="text-amz-accent"/> Gemini Intelligence</h3>
-                                <button onClick={handleAnalysis} className="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-700"><RefreshCw size={16} className={loading ? 'animate-spin' : ''}/></button>
+                                <div className="flex items-center gap-2">
+                                    <button onClick={handleAnalysis} className="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-700"><RefreshCw size={16} className={loading ? 'animate-spin' : ''}/></button>
+                                    <button
+                                      onClick={async () => {
+                                        try {
+                                          setLoading(true);
+                                          const data = await apiFetchProduct(product.asin);
+                                          if (data && data.analysis) setAnalysis(data.analysis);
+                                        } catch (e) {
+                                          console.warn('Backend analysis fetch failed', e);
+                                        } finally {
+                                          setLoading(false);
+                                        }
+                                      }}
+                                      className="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-700 text-xs"
+                                    >
+                                      Get Backend Analysis
+                                    </button>
+                                </div>
                             </div>
-                            
+
                             {loading ? (
                                 <div className="text-slate-400 text-sm animate-pulse">Analyzing market signals...</div>
                             ) : analysis ? (
@@ -185,15 +204,45 @@ const ProductAnalysis: React.FC<ProductAnalysisProps> = ({ product, onClose, isS
                                             <p className="text-slate-300 text-sm mt-1">{analysis.summary}</p>
                                         </div>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-4 mt-4">
+
+                                    {/* NEW: Pros / Cons */}
+                                    <div className="grid grid-cols-2 gap-4 mt-2">
                                         <div className="bg-slate-900 p-3 rounded border border-slate-700">
-                                            <span className="text-xs text-amz-accent font-bold uppercase">FBA Verdict</span>
-                                            <p className="text-slate-300 text-xs mt-1">{analysis.fbaAnalysis}</p>
+                                            <span className="text-xs text-amz-accent font-bold uppercase">Pros</span>
+                                            <ul className="mt-2 text-slate-300 text-sm list-disc list-inside">
+                                                {analysis.pros?.slice(0,5).map((p, i) => <li key={i}>{p}</li>)}
+                                            </ul>
                                         </div>
                                         <div className="bg-slate-900 p-3 rounded border border-slate-700">
-                                            <span className="text-xs text-blue-400 font-bold uppercase">FBM Verdict</span>
-                                            <p className="text-slate-300 text-xs mt-1">{analysis.fbmAnalysis}</p>
+                                            <span className="text-xs text-red-400 font-bold uppercase">Cons</span>
+                                            <ul className="mt-2 text-slate-300 text-sm list-disc list-inside">
+                                                {analysis.cons?.slice(0,5).map((c, i) => <li key={i}>{c}</li>)}
+                                            </ul>
                                         </div>
+                                    </div>
+
+                                    {/* NEW: Signals */}
+                                    <div className="grid grid-cols-3 gap-4 mt-4">
+                                        <div className="bg-slate-900 p-3 rounded border border-slate-700 text-sm">
+                                            <div className="text-xs text-slate-400 uppercase font-bold">Competition</div>
+                                            <div className="text-white font-bold mt-1">{analysis.competitionLevel}</div>
+                                        </div>
+                                        <div className="bg-slate-900 p-3 rounded border border-slate-700 text-sm">
+                                            <div className="text-xs text-slate-400 uppercase font-bold">Demand</div>
+                                            <div className="text-white font-bold mt-1">{analysis.demandLevel}</div>
+                                        </div>
+                                        <div className="bg-slate-900 p-3 rounded border border-slate-700 text-sm">
+                                            <div className="text-xs text-slate-400 uppercase font-bold">IP Risk</div>
+                                            <div className="text-white font-bold mt-1">{analysis.ipRiskAssessment}</div>
+                                        </div>
+                                    </div>
+
+                                    {/* NEW: Seasonality & Suggested Action */}
+                                    <div className="bg-slate-900 p-4 rounded border border-slate-700 mt-4">
+                                        <div className="text-xs text-slate-400 uppercase font-bold">Seasonality</div>
+                                        <div className="text-slate-200 mt-1 text-sm">{analysis.seasonalityInsight}</div>
+                                        <div className="text-xs text-slate-400 uppercase font-bold mt-3">Suggested Action</div>
+                                        <div className="text-amz-accent font-bold mt-1">{analysis.suggestedAction}</div>
                                     </div>
                                 </div>
                             ) : (

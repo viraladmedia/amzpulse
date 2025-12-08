@@ -6,12 +6,18 @@ export async function analyzeBatch(asins: string[]) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ asins })
   });
-  if (!resp.ok) throw new Error(await resp.text());
+  if (!resp.ok) {
+    const t = await resp.text();
+    throw new Error(t || 'Batch analyze failed');
+  }
   return resp.json();
 }
 
 export async function fetchProduct(asin: string) {
   const resp = await fetch(`${API_BASE}/api/products/${encodeURIComponent(asin)}`);
-  if (!resp.ok) throw new Error(await resp.text());
+  if (!resp.ok) {
+    const t = await resp.text();
+    throw new Error(t || 'Fetch product failed');
+  }
   return resp.json();
 }

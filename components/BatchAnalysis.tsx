@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Play, Download, Trash2, AlertTriangle, CheckCircle } from 'lucide-react';
-import { analyzeBatch as apiAnalyzeBatch } from '../services/apiClient';
+import { Play, Download, Trash2, AlertTriangle, CheckCircle, Search } from 'lucide-react';
 import { Product } from '../types';
+import { analyzeBatch as apiAnalyzeBatch } from '../services/apiClient';
 
 const BatchAnalysis: React.FC = () => {
   const [input, setInput] = useState('');
@@ -10,36 +10,36 @@ const BatchAnalysis: React.FC = () => {
 
   const mapExternalToProduct = (data: any): Product => {
     return {
-      id: data.asin || (Math.random().toString(36).slice(2)),
-      asin: data.asin || '',
+      id: data.asin || (data.id || Math.random().toString(36).slice(2)),
+      asin: data.asin || data.id || '',
       name: data.title || data.name || 'Unknown Product',
       brand: data.brand || 'Unknown',
       category: data.category || 'Misc',
-      subCategory: undefined,
-      price: data.price || 0,
-      image: data.image || `https://picsum.photos/400/400?random=${encodeURIComponent(data.asin || Math.random())}`,
-      rating: data.rating || 4.0,
-      reviews: data.reviews || 0,
-      trend: 0,
+      subCategory: data.subCategory || undefined,
+      price: Number(data.price || 0),
+      image: data.image || `https://picsum.photos/400/400?random=${encodeURIComponent(data.asin || data.id || Math.random())}`,
+      rating: Number(data.rating || 4.0),
+      reviews: Number(data.reviews || 0),
+      trend: Number(data.trend || 0),
       description: data.description || '',
       priceHistory: data.priceHistory || [],
       bsrHistory: data.bsrHistory || [],
-      bsr: data.bsr || data.rank || 0,
-      estimatedSales: data.estSales || 0,
-      referralFee: data.referralFee || 0,
-      fbaFee: data.fbaFee || 0,
-      storageFee: data.storageFee || 0.5,
+      bsr: Number(data.bsr || data.rank || 0),
+      estimatedSales: Number(data.estSales || data.estimatedSales || 0),
+      referralFee: Number(data.referralFee || 0),
+      fbaFee: Number(data.fbaFee || 0),
+      storageFee: Number(data.storageFee || 0.5),
       weight: data.weight || '',
       dimensions: data.dimensions || '',
-      sellers: data.sellers || 1,
-      isHazmat: data.isHazmat || false,
-      isIpRisk: data.isIpRisk || false,
-      isOversized: false,
+      sellers: Number(data.sellers || 1),
+      isHazmat: Boolean(data.isHazmat),
+      isIpRisk: Boolean(data.isIpRisk),
+      isOversized: Boolean(data.isOversized),
       seasonalityTags: data.seasonalityTags || ['Evergreen'],
-      supplierUrl: undefined,
-      targetRoi: undefined,
-      notes: undefined,
-      analysis: data.analysis // if backend returned analysis
+      supplierUrl: data.supplierUrl || undefined,
+      targetRoi: data.targetRoi || undefined,
+      notes: data.notes || undefined,
+      analysis: data.analysis || undefined
     };
   };
 
@@ -50,22 +50,16 @@ const BatchAnalysis: React.FC = () => {
     const asins = input.split(/[\n,]+/).map(s => s.trim()).filter(s => s.length > 0);
 
     try {
-      // Call backend batch analyze endpoint
       const backendResults: any[] = await apiAnalyzeBatch(asins);
-      // backendResults expected to be array of product-like objects
       const mapped: Product[] = backendResults.map(item => mapExternalToProduct(item));
       setResults(mapped);
     } catch (err) {
-      console.error('Batch analyze failed, falling back to local mocks:', err);
-      // Fallback: keep using local generation (existing behavior)
-      const newProducts: Product[] = [];
-      for (const asin of asins) {
-        // minimal fallback mapping to keep UX functional
-        const fallback = mapExternalToProduct({ asin, title: `Fallback ${asin}`, price: 0, bsr: 0 });
-        newProducts.push(fallback);
-        await new Promise(r => setTimeout(r, 150));
-      }
-      setResults(newProducts);
+      console.error('Batch analyze failed, using fallback list:', err);
+      // Fallback minimal mapping to keep UX responsive
+      const fallback: Product[] = asins.map(a => mapExternalToProduct({ asin: a, title: `Fallback ${a}`, price: 0, bsr: 0 }));
+      // small delay to simulate processing
+      await new Promise(r => setTimeout(r, 300));
+      setResults(fallback);
     } finally {
       setIsProcessing(false);
     }
@@ -127,7 +121,8 @@ const BatchAnalysis: React.FC = () => {
                             <th className="p-4 font-bold border-b border-slate-700 text-right">BSR</th>
                             <th className="p-4 font-bold border-b border-slate-700 text-right">Sales/mo</th>
                             <th className="p-4 font-bold border-b border-slate-700 text-center">Risk</th>
-                            <th className="p-4 font-bold border-b border-slate-700 text-center">Profit Est.</th>
+                            <th className="p-4 font-bold border-b border-slate-700 text-center">AI</th>
+                            <th className="p-4 font-bold border-b border-slate-700 text-right">Profit Est.</th>
                         </tr>
                     </thead>
                     <tbody className="text-sm">
@@ -158,6 +153,19 @@ const BatchAnalysis: React.FC = () => {
                                             </span>
                                         )}
                                     </td>
+
+                                    {/* AI Column */}
+                                    <td className="p-4 text-center">
+                                        {p.analysis ? (
+                                          <div className="flex flex-col items-center text-xs">
+                                             <span className={`font-bold ${p.analysis.grade === 'A' ? 'text-green-300' : p.analysis.grade === 'B' ? 'text-green-200' : p.analysis.grade === 'C' ? 'text-yellow-200' : 'text-red-300'}`}>{p.analysis.grade}</span>
+                                             <span className="text-slate-400 mt-1 max-w-[160px] line-clamp-2 text-[11px]">{p.analysis.suggestedAction || p.analysis.summary}</span>
+                                          </div>
+                                        ) : (
+                                          <span className="text-slate-500 text-xs">No AI</span>
+                                        )}
+                                    </td>
+
                                     <td className="p-4 text-right font-bold text-slate-200">
                                         ${profit.toFixed(2)}
                                     </td>

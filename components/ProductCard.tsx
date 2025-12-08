@@ -30,6 +30,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, isSa
                 <span className="bg-slate-900/90 backdrop-blur text-white text-[10px] font-bold px-2 py-1 rounded border border-slate-700">
                 #{product.bsr.toLocaleString()} BSR
                 </span>
+
+                {product.analysis && (
+                  <span className={`text-xs px-2 py-1 rounded font-bold ${product.analysis.grade === 'A' ? 'bg-green-500/20 text-green-300' : product.analysis.grade === 'B' ? 'bg-green-400/10 text-green-200' : product.analysis.grade === 'C' ? 'bg-yellow-500/10 text-yellow-300' : 'bg-red-500/10 text-red-300'}`}>
+                    AI {product.analysis.grade} • {product.analysis.score}
+                  </span>
+                )}
+
                 {isRareFind && (
                     <span className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-[10px] font-bold px-2 py-1 rounded flex items-center gap-1 shadow-lg animate-pulse">
                         <Diamond size={10} fill="currentColor"/> Rare Find
