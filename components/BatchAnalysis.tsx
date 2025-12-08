@@ -1,42 +1,74 @@
 import React, { useState } from 'react';
-import { Play, Download, Trash2, AlertTriangle, CheckCircle, Search } from 'lucide-react';
+import { Play, Download, Trash2, AlertTriangle, CheckCircle } from 'lucide-react';
+import { analyzeBatch as apiAnalyzeBatch } from '../services/apiClient';
 import { Product } from '../types';
-import { generateMockProduct } from '../services/mockService';
-import { analyzeProductSellPotential } from '../services/geminiService';
 
 const BatchAnalysis: React.FC = () => {
   const [input, setInput] = useState('');
   const [results, setResults] = useState<Product[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
 
+  const mapExternalToProduct = (data: any): Product => {
+    return {
+      id: data.asin || (Math.random().toString(36).slice(2)),
+      asin: data.asin || '',
+      name: data.title || data.name || 'Unknown Product',
+      brand: data.brand || 'Unknown',
+      category: data.category || 'Misc',
+      subCategory: undefined,
+      price: data.price || 0,
+      image: data.image || `https://picsum.photos/400/400?random=${encodeURIComponent(data.asin || Math.random())}`,
+      rating: data.rating || 4.0,
+      reviews: data.reviews || 0,
+      trend: 0,
+      description: data.description || '',
+      priceHistory: data.priceHistory || [],
+      bsrHistory: data.bsrHistory || [],
+      bsr: data.bsr || data.rank || 0,
+      estimatedSales: data.estSales || 0,
+      referralFee: data.referralFee || 0,
+      fbaFee: data.fbaFee || 0,
+      storageFee: data.storageFee || 0.5,
+      weight: data.weight || '',
+      dimensions: data.dimensions || '',
+      sellers: data.sellers || 1,
+      isHazmat: data.isHazmat || false,
+      isIpRisk: data.isIpRisk || false,
+      isOversized: false,
+      seasonalityTags: data.seasonalityTags || ['Evergreen'],
+      supplierUrl: undefined,
+      targetRoi: undefined,
+      notes: undefined,
+      analysis: data.analysis // if backend returned analysis
+    };
+  };
+
   const handleProcess = async () => {
     if (!input.trim()) return;
     setIsProcessing(true);
 
-    // Parse input (split by newlines or commas)
     const asins = input.split(/[\n,]+/).map(s => s.trim()).filter(s => s.length > 0);
-    
-    // Simulate processing delay and fetching
-    const newProducts: Product[] = [];
-    
-    // Process in chunks to simulate API work
-    for (const asin of asins) {
-        // Generate mock data for this ASIN
-        const product = generateMockProduct(asin, { asin: asin });
-        
-        // Quick AI analysis (simulated or real if key exists)
-        // We do this lightly here to avoid rate limits on batch
-        if (Math.random() > 0.5) {
-             product.analysis = await analyzeProductSellPotential(product);
-        }
-        
-        newProducts.push(product);
-        // Small delay for realism
-        await new Promise(r => setTimeout(r, 300));
-    }
 
-    setResults(newProducts);
-    setIsProcessing(false);
+    try {
+      // Call backend batch analyze endpoint
+      const backendResults: any[] = await apiAnalyzeBatch(asins);
+      // backendResults expected to be array of product-like objects
+      const mapped: Product[] = backendResults.map(item => mapExternalToProduct(item));
+      setResults(mapped);
+    } catch (err) {
+      console.error('Batch analyze failed, falling back to local mocks:', err);
+      // Fallback: keep using local generation (existing behavior)
+      const newProducts: Product[] = [];
+      for (const asin of asins) {
+        // minimal fallback mapping to keep UX functional
+        const fallback = mapExternalToProduct({ asin, title: `Fallback ${asin}`, price: 0, bsr: 0 });
+        newProducts.push(fallback);
+        await new Promise(r => setTimeout(r, 150));
+      }
+      setResults(newProducts);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const clearResults = () => {

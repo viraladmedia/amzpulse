@@ -6,7 +6,8 @@ import { ProductCard } from './components/ProductCard';
 import ProductAnalysis from './components/ProductAnalysis';
 import Sidebar from './components/Sidebar';
 import BatchAnalysis from './components/BatchAnalysis';
-import { INITIAL_PRODUCTS, generateMockProduct } from './services/mockService';
+import { fetchProduct as apiFetchProduct } from './services/apiClient';
+import { generateMockProduct, INITIAL_PRODUCTS } from './services/mockService';
 
 const App: React.FC = () => {
   // State
@@ -45,14 +46,53 @@ const App: React.FC = () => {
 
   // Search Logic (Mocking API fetch for single item lookup)
   useEffect(() => {
-     if (filters.search && filters.search.startsWith('B0') && filters.search.length === 10) {
-         // Simulate looking up a specific ASIN if not found in current list
-         const exists = products.find(p => p.asin === filters.search);
-         if (!exists) {
-             const newProd = generateMockProduct(filters.search);
-             setProducts(prev => [newProd, ...prev]);
-         }
-     }
+     const tryFetch = async () => {
+       if (filters.search && filters.search.startsWith('B0') && filters.search.length === 10) {
+           // Simulate looking up a specific ASIN if not found in current list
+           const exists = products.find(p => p.asin === filters.search);
+           if (!exists) {
+               try {
+                 const data = await apiFetchProduct(filters.search);
+                 // Map backend shape to frontend Product (minimal)
+                 const newProd = {
+                    id: data.asin || filters.search,
+                    asin: data.asin || filters.search,
+                    name: data.title || `Product ${filters.search}`,
+                    brand: data.brand || 'Unknown',
+                    category: data.category || 'Misc',
+                    subCategory: undefined,
+                    price: data.price || 0,
+                    image: data.image || `https://picsum.photos/400/400?random=${filters.search}`,
+                    rating: 4.0,
+                    reviews: 0,
+                    trend: 0,
+                    description: data.description || '',
+                    priceHistory: data.priceHistory || [],
+                    bsrHistory: data.bsrHistory || [],
+                    bsr: data.bsr || 0,
+                    estimatedSales: data.estSales || 0,
+                    referralFee: data.referralFee || 0,
+                    fbaFee: data.fbaFee || 0,
+                    storageFee: 0.5,
+                    weight: data.weight || '',
+                    dimensions: data.dimensions || '',
+                    sellers: data.sellers || 1,
+                    isHazmat: data.isHazmat || false,
+                    isIpRisk: data.isIpRisk || false,
+                    isOversized: false,
+                    seasonalityTags: data.seasonalityTags || ['Evergreen'],
+                    analysis: data.analysis
+                 };
+                 setProducts(prev => [newProd, ...prev]);
+               } catch (err) {
+                 // Fallback to mock generation if backend unreachable
+                 const newProd = generateMockProduct(filters.search);
+                 setProducts(prev => [newProd, ...prev]);
+               }
+           }
+       }
+     };
+     tryFetch();
   }, [filters.search]);
 
   // Filtering Logic
