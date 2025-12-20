@@ -1,12 +1,12 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Product, AnalysisResult } from '../types';
 
-// Safe initialization of GenAI client
+// Safe initialization of GenAI client (browser env via Vite)
 const getAiClient = () => {
   try {
-    const key = process.env.API_KEY;
+    const key = import.meta.env.VITE_GEMINI_API_KEY as string | undefined;
     if (!key) {
-      console.warn("Gemini API Key is missing.");
+      console.warn("Gemini API Key is missing. Set VITE_GEMINI_API_KEY.");
       return null;
     }
     return new GoogleGenAI({ apiKey: key });

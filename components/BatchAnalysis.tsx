@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Play, Download, Trash2, AlertTriangle, CheckCircle, Search } from 'lucide-react';
+import { Play, Download, Trash2, AlertTriangle, CheckCircle } from 'lucide-react';
 import { Product } from '../types';
 import { analyzeBatch as apiAnalyzeBatch } from '../services/apiClient';
 
@@ -7,6 +7,7 @@ const BatchAnalysis: React.FC = () => {
   const [input, setInput] = useState('');
   const [results, setResults] = useState<Product[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const mapExternalToProduct = (data: any): Product => {
     return {
@@ -46,6 +47,7 @@ const BatchAnalysis: React.FC = () => {
   const handleProcess = async () => {
     if (!input.trim()) return;
     setIsProcessing(true);
+    setError(null);
 
     const asins = input.split(/[\n,]+/).map(s => s.trim()).filter(s => s.length > 0);
 
@@ -55,6 +57,7 @@ const BatchAnalysis: React.FC = () => {
       setResults(mapped);
     } catch (err) {
       console.error('Batch analyze failed, using fallback list:', err);
+      setError((err as Error)?.message || 'Batch analyze failed');
       // Fallback minimal mapping to keep UX responsive
       const fallback: Product[] = asins.map(a => mapExternalToProduct({ asin: a, title: `Fallback ${a}`, price: 0, bsr: 0 }));
       // small delay to simulate processing
@@ -90,6 +93,7 @@ const BatchAnalysis: React.FC = () => {
                 className="w-full h-48 bg-slate-950 border border-slate-700 rounded-lg p-4 text-slate-300 font-mono text-sm focus:border-amz-accent focus:ring-1 focus:ring-amz-accent outline-none"
                 placeholder="B08H8K1234&#10;B09J9L5678&#10;B07K7M9012"
             />
+            {error && <div className="mt-3 text-sm text-red-300 bg-red-500/10 border border-red-500/30 rounded p-3">{error}</div>}
             <div className="mt-4 flex justify-end">
                 <button 
                     onClick={handleProcess}
