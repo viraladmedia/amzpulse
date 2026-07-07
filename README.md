@@ -3,7 +3,7 @@
 
 1. Install dependencies:
    `npm install`
-2. Copy `.env.example` to `.env.local` and set your keys (e.g. `VITE_GEMINI_API_KEY`)
+2. Copy `.env.example` to `.env.local` and set your keys (e.g. `GEMINI_API_KEY`)
 3. Run the app:
    `npm run dev`
 
@@ -15,25 +15,34 @@ This repo now includes server-side product API routes:
 - `GET /api/products/:asin`
 - `POST /api/batch/analyze` with `{ "asins": ["B0..."] }`
 
-The browser never receives Amazon API secrets. Set these variables on the server or in Vercel project settings:
+The browser never receives Amazon or provider API secrets — all product lookups run through `server/amazonProvider.mjs`, which fans out to one or more **product data providers** in `server/providers/`:
 
-- `AMAZON_PAAPI_ACCESS_KEY`
-- `AMAZON_PAAPI_SECRET_KEY`
-- `AMAZON_PAAPI_PARTNER_TAG`
+- `server/providers/paapi.mjs` — Amazon Product Advertising API (PA-API)
+- `server/providers/keepa.mjs` — [Keepa](https://keepa.com/#!api) (also the only provider here that returns real price/sales-rank history for the "History" tab)
+- `server/providers/jungleScout.mjs` — [Jungle Scout API](https://developer.junglescout.com/api)
+
+Configure credentials for any subset of these; only providers with credentials set are used. For a batch of ASINs, providers are tried in order and each one only fills in the ASINs the previous one couldn't find — so if PA-API is unconfigured, rate-limited, or missing a field for a given ASIN, Keepa/Jungle Scout can still cover it instead of the whole lookup failing. Set the order (or restrict to a subset) with:
+
+- `PRODUCT_DATA_PROVIDERS=paapi,keepa,junglescout` (default order shown; e.g. set to `keepa` alone to skip PA-API entirely)
+
+Provider credentials:
+
+- PA-API: `AMAZON_PAAPI_ACCESS_KEY`, `AMAZON_PAAPI_SECRET_KEY`, `AMAZON_PAAPI_PARTNER_TAG` (optional: `AMAZON_PAAPI_MARKETPLACE`, `AMAZON_PAAPI_HOST`, `AMAZON_PAAPI_REGION`, `AMAZON_PAAPI_LANGUAGE`, defaulting to the US locale)
+- Keepa: `KEEPA_API_KEY` (optional `KEEPA_DOMAIN`, default `1` for amazon.com)
+- Jungle Scout: `JUNGLESCOUT_KEY_NAME`, `JUNGLESCOUT_API_KEY` (optional `JUNGLESCOUT_MARKETPLACE`, default `us`)
 - `FEATURED_ASINS` as a comma-separated list for dashboard preload products
 
-For local development, `.env.local` is loaded by `vite.config.ts` so the same-origin product API middleware can call Amazon directly while keeping credentials out of browser code.
+For local development, `.env.local` is loaded by `vite.config.ts` so the same-origin product API middleware can call these providers directly while keeping credentials out of browser code.
 
-Optional marketplace overrides default to the US locale:
+Amazon's Product Advertising API documentation says PA-API was deprecated on May 15, 2026 and points new integrations to the Creators API. The current implementation keeps the existing PA-API credential flow working for accounts that still have access, and Keepa/Jungle Scout give you a working path once it stops. There is intentionally no scraping fallback here: an earlier revision scraped Amazon product pages with a headless browser and solved CAPTCHA challenges to keep working after PA-API access lapsed, which is not something this project does. If none of the configured providers can find an ASIN, the API returns a clear error instead of silently falling back to scraping.
 
-- `AMAZON_PAAPI_MARKETPLACE=www.amazon.com`
-- `AMAZON_PAAPI_HOST=webservices.amazon.com`
-- `AMAZON_PAAPI_REGION=us-east-1`
-- `AMAZON_PAAPI_LANGUAGE=en_US`
+Field coverage varies by provider — PA-API returns catalog fields like title, image, price, offer availability, browse nodes, and sales rank, but not review counts, FBA fees, IP risk, hazmat status, estimated monthly sales, or historical charts. Keepa fills in rating, review count, and real price/BSR history. The UI marks fields no configured provider supplied as unavailable instead of filling them with mock values.
 
-Amazon's Product Advertising API documentation says PA-API was deprecated on May 15, 2026 and points new integrations to the Creators API. The current implementation keeps the existing PA-API credential flow working for accounts that still have access; migrate the provider module in `server/amazonProvider.mjs` when your Amazon account is moved to the replacement API.
+The Jungle Scout mapping in `server/providers/jungleScout.mjs` is a best-effort starting point — its public docs don't fully enumerate the Product Database endpoint's request/response shape for direct ASIN lookups, so verify field names against your account's actual API reference before relying on it in production.
 
-PA-API returns product catalog fields such as title, image, price, offer availability, browse nodes, and sales rank. It does not return every metric the workspace can display, including review counts, FBA fees, IP risk, hazmat status, estimated monthly sales, or historical charts. The UI now marks those fields as unavailable instead of filling them with mock values.
+## AI analysis
+
+Gemini-based product analysis now runs server-side (`server/geminiProvider.mjs`, exposed at `POST /api/analysis/product`) instead of calling the Gemini SDK from the browser. Set `GEMINI_API_KEY` (server-only, no `VITE_` prefix) so it never ships in the client bundle.
 
 ## Frontend -> Backend integration
 

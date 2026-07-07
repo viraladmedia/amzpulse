@@ -141,6 +141,15 @@ const handle = async <T>(resp: Response, fallbackMsg: string): Promise<T> => {
   }
 };
 
+export async function analyzeProductWithAi(product: Record<string, any>, userStats?: Record<string, any>) {
+  const resp = await fetch(`${API_BASE}/api/analysis/product`, {
+    method: 'POST',
+    headers: buildHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ product, userStats })
+  });
+  return handle<Record<string, any>>(resp, 'AI analysis failed');
+}
+
 export async function analyzeBatch(asins: string[]) {
   const resp = await fetch(`${API_BASE}/api/batch/analyze`, {
     method: 'POST',

@@ -115,12 +115,14 @@ const ProductAnalysis: React.FC<ProductAnalysisProps> = ({ product, onClose, isS
 
         {/* Navigation Tabs */}
         <div className="flex border-b border-slate-800 bg-slate-900/50">
-            {[
+            {(
+              [
                 { id: 'overview', label: 'Overview', icon: Activity },
                 { id: 'calculator', label: 'Profit & ROI', icon: Calculator },
                 { id: 'history', label: 'History', icon: Calendar },
                 { id: 'risks', label: 'Risks & Flags', icon: AlertOctagon }
-            ].map((tab: { id: ProductAnalysisTab; label: string; icon: React.ComponentType<{ size?: number }> }) => (
+              ] as { id: ProductAnalysisTab; label: string; icon: React.ComponentType<{ size?: number }> }[]
+            ).map((tab) => (
                 <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Search, Layers, Heart, Settings, Zap, LogOut, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, Search, Layers, Heart, Settings, Zap, LogOut } from 'lucide-react';
 import { ViewMode } from '../types';
 
 interface SidebarProps {
@@ -9,7 +9,6 @@ interface SidebarProps {
   setIsOpen: (isOpen: boolean) => void;
   isAuthenticated?: boolean;
   onLogout?: () => void;
-  isAdmin?: boolean;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -18,8 +17,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   isOpen,
   setIsOpen,
   isAuthenticated = false,
-  onLogout,
-  isAdmin = false
+  onLogout
 }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -28,10 +26,6 @@ const Sidebar: React.FC<SidebarProps> = ({
     { id: 'watchlist', label: 'Watchlist', icon: Heart },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
-
-  if (isAdmin) {
-    menuItems.push({ id: 'admin', label: 'Admin', icon: ShieldCheck });
-  }
 
   return (
     <>

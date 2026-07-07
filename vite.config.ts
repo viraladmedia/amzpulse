@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import { handleAmazonApiRequest } from './server/amazonProvider.mjs';
+import { handleGeminiApiRequest } from './server/geminiProvider.mjs';
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
@@ -27,7 +28,9 @@ export default defineConfig(({ mode }) => {
         configureServer(server) {
           server.middlewares.use(async (req, res, next) => {
             try {
-              const handled = await handleAmazonApiRequest(req, res, runtimeEnv);
+              const handled =
+                (await handleAmazonApiRequest(req, res, runtimeEnv)) ||
+                (await handleGeminiApiRequest(req, res, runtimeEnv));
               if (!handled) next();
             } catch (error) {
               next(error as Error);
@@ -51,16 +54,13 @@ export default defineConfig(({ mode }) => {
           manualChunks: {
             react: ['react', 'react/jsx-runtime', 'react-dom/client'],
             recharts: ['recharts'],
-            lucide: ['lucide-react'],
-            genai: ['@google/genai']
+            lucide: ['lucide-react']
           }
         }
       }
     },
     define: {
-      // This allows the app to access the API_KEY set in deployment environment variables
-      'process.env.API_KEY': JSON.stringify(env.API_KEY),
-      // Also surface API base even if the user forgot the VITE_ prefix (we fill __APP_API_BASE__)
+      // Surface API base even if the user forgot the VITE_ prefix (we fill __APP_API_BASE__)
       __APP_API_BASE__: JSON.stringify(env.VITE_API_BASE ? env.VITE_API_BASE.replace(/\/$/, '') : apiBaseFromEnv.replace(/\/$/, ''))
     }
   };

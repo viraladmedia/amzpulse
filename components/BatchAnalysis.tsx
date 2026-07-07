@@ -135,12 +135,13 @@ const BatchAnalysis: React.FC = () => {
                             <th className="p-4 font-bold border-b border-slate-700 text-right">Sales/mo</th>
                             <th className="p-4 font-bold border-b border-slate-700 text-center">Risk</th>
                             <th className="p-4 font-bold border-b border-slate-700 text-center">AI</th>
-                            <th className="p-4 font-bold border-b border-slate-700 text-right">Profit Est.</th>
+                            <th className="p-4 font-bold border-b border-slate-700 text-right">Net After Fees</th>
                         </tr>
                     </thead>
                     <tbody className="text-sm">
                         {results.map((p, idx) => {
-                            const profit = p.price - (p.price * 0.4) - p.referralFee - p.fbaFee; // Rough estimate
+                            // Sell price minus Amazon's own referral/FBA fees; excludes unknown buy cost, so this is not full profit.
+                            const netAfterFees = p.price - p.referralFee - p.fbaFee;
                             const hasProfitInputs = p.price > 0 && (p.referralFee > 0 || p.fbaFee > 0);
                             return (
                                 <tr key={p.asin || p.id || idx} className="border-b border-slate-800 hover:bg-slate-800/50 transition-colors">
@@ -187,7 +188,7 @@ const BatchAnalysis: React.FC = () => {
                                     </td>
 
                                     <td className="p-4 text-right font-bold text-slate-200">
-                                        {hasProfitInputs ? `$${profit.toFixed(2)}` : 'N/A'}
+                                        {hasProfitInputs ? `$${netAfterFees.toFixed(2)}` : 'N/A'}
                                     </td>
                                 </tr>
                             );
