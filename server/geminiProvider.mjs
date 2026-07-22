@@ -1,5 +1,6 @@
 import { GoogleGenAI, Type } from '@google/genai';
 import { HttpError, readJsonBody, sendError, sendJson } from './http.mjs';
+import { checkRateLimit, RATE_LIMITS } from './rateLimit.mjs';
 
 const valueFromEnv = (env, keys) => {
   for (const key of keys) {
@@ -122,6 +123,7 @@ export const handleGeminiApiRequest = async (req, res, env = process.env) => {
       throw new HttpError(405, 'Method not allowed.');
     }
 
+    checkRateLimit(req, RATE_LIMITS.analysis);
     const body = await readJsonBody(req);
     if (!body?.product) {
       throw new HttpError(400, 'Provide a product to analyze.');

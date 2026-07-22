@@ -1,4 +1,5 @@
 import { HttpError, readJsonBody, sendError, sendJson } from './http.mjs';
+import { checkRateLimit, RATE_LIMITS } from './rateLimit.mjs';
 import { ASIN_PATTERN, valueFromEnv } from './providers/shared.mjs';
 import * as paapiProvider from './providers/paapi.mjs';
 import * as spapiProvider from './providers/spapi.mjs';
@@ -101,6 +102,7 @@ export const handleAmazonApiRequest = async (req, res, env = process.env) => {
 
   try {
     if (req.method === 'GET' && path === '/api/products/featured') {
+      checkRateLimit(req, RATE_LIMITS.featured);
       const asins = getFeaturedAsins(env);
       if (asins.length === 0) {
         sendJson(res, 200, []);
@@ -114,6 +116,7 @@ export const handleAmazonApiRequest = async (req, res, env = process.env) => {
 
     const productMatch = path.match(/^\/api\/products\/([^/]+)$/);
     if (req.method === 'GET' && productMatch) {
+      checkRateLimit(req, RATE_LIMITS.product);
       const asin = decodeURIComponent(productMatch[1] || '');
       const products = await fetchAmazonProducts([asin], env);
       if (!products[0]) {
@@ -125,6 +128,7 @@ export const handleAmazonApiRequest = async (req, res, env = process.env) => {
     }
 
     if (req.method === 'POST' && path === '/api/batch/analyze') {
+      checkRateLimit(req, RATE_LIMITS.batch);
       const body = await readJsonBody(req);
       const products = await fetchAmazonProducts(body?.asins || [], env);
       sendJson(res, 200, products);

@@ -1,5 +1,6 @@
 import { HttpError, readJsonBody, sendError, sendJson } from '../../server/http.mjs';
 import { analyzeProduct } from '../../server/geminiProvider.mjs';
+import { checkRateLimit, RATE_LIMITS } from '../../server/rateLimit.mjs';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -8,6 +9,7 @@ export default async function handler(req, res) {
   }
 
   try {
+    checkRateLimit(req, RATE_LIMITS.analysis);
     const body = await readJsonBody(req);
     if (!body?.product) {
       throw new HttpError(400, 'Provide a product to analyze.');

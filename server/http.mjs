@@ -35,6 +35,9 @@ export const sendJson = (res, status, payload) => {
 
 export const sendError = (res, error) => {
   const status = error?.status || 500;
+  if (status === 429 && error?.details?.retryAfterSeconds) {
+    res.setHeader('Retry-After', String(error.details.retryAfterSeconds));
+  }
   sendJson(res, status, {
     error: error?.message || 'Unexpected server error.',
     details: error?.details

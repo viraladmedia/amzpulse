@@ -1,4 +1,5 @@
 import { fetchAmazonProducts, getFeaturedAsins, HttpError, sendError, sendJson } from '../../server/amazonProvider.mjs';
+import { checkRateLimit, RATE_LIMITS } from '../../server/rateLimit.mjs';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -7,6 +8,7 @@ export default async function handler(req, res) {
   }
 
   try {
+    checkRateLimit(req, RATE_LIMITS.featured);
     const asins = getFeaturedAsins();
     if (asins.length === 0) {
       sendJson(res, 200, []);
