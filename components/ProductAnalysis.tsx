@@ -185,6 +185,53 @@ const ProductAnalysis: React.FC<ProductAnalysisProps> = ({ product, onClose, isS
                                  )}
                              </div>
                          </div>
+
+                         {/* Product Details Box */}
+                         <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
+                             <h3 className="text-slate-400 text-xs font-bold uppercase mb-4">Product Details</h3>
+                             <div className="space-y-3 text-sm">
+                                 <div className="flex justify-between">
+                                     <span className="text-slate-400">Price</span>
+                                     <span className="text-white font-bold">{formatMoney(product)}{product.currency && product.currency !== 'USD' ? ` ${product.currency}` : ''}</span>
+                                 </div>
+                                 <div className="flex justify-between">
+                                     <span className="text-slate-400">Rating</span>
+                                     <span className="text-white font-bold">
+                                         {product.rating > 0 ? `${product.rating.toFixed(1)} ★` : 'N/A'}
+                                         {product.reviews > 0 && <span className="text-slate-400 font-normal"> ({product.reviews.toLocaleString()})</span>}
+                                     </span>
+                                 </div>
+                                 <div className="flex justify-between">
+                                     <span className="text-slate-400">Category</span>
+                                     <span
+                                        className="max-w-[12rem] truncate text-right text-white font-bold"
+                                        title={[product.category, product.subCategory].filter(Boolean).join(' › ')}
+                                     >
+                                         {[product.category, product.subCategory].filter(Boolean).join(' › ') || 'N/A'}
+                                     </span>
+                                 </div>
+                                 <div className="flex justify-between">
+                                     <span className="text-slate-400">Weight</span>
+                                     <span className="text-white font-bold">{product.weight || 'N/A'}</span>
+                                 </div>
+                                 <div className="flex justify-between">
+                                     <span className="text-slate-400">Dimensions</span>
+                                     <span className="max-w-[12rem] truncate text-right text-white font-bold" title={product.dimensions}>{product.dimensions || 'N/A'}</span>
+                                 </div>
+                                 <div className="flex justify-between border-t border-slate-700 pt-3 text-xs">
+                                     <span className="text-slate-500">Source</span>
+                                     <span className="font-mono text-slate-400">{product.dataSource || 'unknown'}</span>
+                                 </div>
+                             </div>
+                         </div>
+
+                         {/* Description */}
+                         {product.description && (
+                             <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
+                                 <h3 className="text-slate-400 text-xs font-bold uppercase mb-3">Description</h3>
+                                 <p className="text-slate-300 text-sm leading-6 max-h-48 overflow-y-auto pr-1">{product.description}</p>
+                             </div>
+                         )}
                     </div>
 
                     {/* Right Column: AI Analysis */}
@@ -238,6 +285,18 @@ const ProductAnalysis: React.FC<ProductAnalysisProps> = ({ product, onClose, isS
                                             <ul className="mt-2 text-slate-300 text-sm list-disc list-inside">
                                                 {analysis.cons?.slice(0,5).map((c, i) => <li key={i}>{c}</li>)}
                                             </ul>
+                                        </div>
+                                    </div>
+
+                                    {/* NEW: FBA / FBM Viability */}
+                                    <div className="grid grid-cols-2 gap-4 mt-2">
+                                        <div className="bg-slate-900 p-3 rounded border border-slate-700">
+                                            <span className="text-xs text-cyan-400 font-bold uppercase flex items-center gap-1"><Truck size={12}/> FBA Viability</span>
+                                            <p className="mt-2 text-slate-300 text-sm">{analysis.fbaAnalysis || 'Not provided'}</p>
+                                        </div>
+                                        <div className="bg-slate-900 p-3 rounded border border-slate-700">
+                                            <span className="text-xs text-purple-400 font-bold uppercase flex items-center gap-1"><Package size={12}/> FBM Viability</span>
+                                            <p className="mt-2 text-slate-300 text-sm">{analysis.fbmAnalysis || 'Not provided'}</p>
                                         </div>
                                     </div>
 

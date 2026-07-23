@@ -56,5 +56,7 @@ export const RATE_LIMITS = {
   analysis: { name: 'analysis', windowMs: 60_000, max: 10 }, // Gemini call per request
   batch: { name: 'batch', windowMs: 60_000, max: 5 }, // up to 100 ASINs per call
   product: { name: 'product', windowMs: 60_000, max: 30 }, // single ASIN lookup
-  featured: { name: 'featured', windowMs: 60_000, max: 20 } // dashboard preload
+  featured: { name: 'featured', windowMs: 60_000, max: 20 }, // dashboard preload
+  trending: { name: 'trending', windowMs: 60_000, max: 20 }, // dashboard trending rail
+  bestsellers: { name: 'bestsellers', windowMs: 60_000, max: 20 } // dashboard best-sellers rail
 };

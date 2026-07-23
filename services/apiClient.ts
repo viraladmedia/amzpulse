@@ -171,6 +171,16 @@ export async function getFeaturedProducts() {
   return handle<Record<string, any>[]>(resp, 'Fetch featured products failed');
 }
 
+export async function getTrendingProducts() {
+  const resp = await fetch(`${API_BASE}/api/products/trending`);
+  return handle<Record<string, any>[]>(resp, 'Fetch trending products failed');
+}
+
+export async function getBestSellerProducts() {
+  const resp = await fetch(`${API_BASE}/api/products/bestsellers`);
+  return handle<Record<string, any>[]>(resp, 'Fetch best-seller products failed');
+}
+
 export async function login(email: string, password: string) {
   const resp = await fetch(`${API_BASE}/api/auth/login`, {
     method: 'POST',

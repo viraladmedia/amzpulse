@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useDeferredValue, useEffect, useMemo, useState } from 'react';
-import { CreditCard, Loader2, LogIn, LogOut, Menu, Shield, Sparkles, UserPlus } from 'lucide-react';
+import { CreditCard, Flame, Loader2, LogIn, LogOut, Menu, Shield, Sparkles, Trophy, UserPlus } from 'lucide-react';
 import { FilterState, Product, ViewMode } from '../types';
 import FilterBar from './FilterBar';
 import { ProductCard } from './ProductCard';
@@ -9,7 +9,9 @@ import {
   addToWatchlist,
   createCheckoutSession,
   fetchProduct as apiFetchProduct,
+  getBestSellerProducts as apiGetBestSellerProducts,
   getFeaturedProducts as apiGetFeaturedProducts,
+  getTrendingProducts as apiGetTrendingProducts,
   getUsage,
   getWatchlist,
   login,
@@ -65,6 +67,12 @@ const AppWorkspace: React.FC = () => {
   const [isFetchingProduct, setIsFetchingProduct] = useState(false);
   const [isLoadingFeatured, setIsLoadingFeatured] = useState(false);
   const [productError, setProductError] = useState<string | null>(null);
+  const [trendingProducts, setTrendingProducts] = useState<Product[]>([]);
+  const [isLoadingTrending, setIsLoadingTrending] = useState(false);
+  const [trendingError, setTrendingError] = useState<string | null>(null);
+  const [bestSellerProducts, setBestSellerProducts] = useState<Product[]>([]);
+  const [isLoadingBestSellers, setIsLoadingBestSellers] = useState(false);
+  const [bestSellersError, setBestSellersError] = useState<string | null>(null);
 
   const deferredSearch = useDeferredValue(filters.search.trim());
   const canManageBilling = role === 'owner' || role === 'admin';
@@ -106,6 +114,62 @@ const AppWorkspace: React.FC = () => {
     };
 
     void loadFeaturedProducts();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadTrendingProducts = async () => {
+      try {
+        setIsLoadingTrending(true);
+        setTrendingError(null);
+        const trending = await apiGetTrendingProducts();
+        if (cancelled) return;
+        setTrendingProducts(Array.isArray(trending) ? normalizeExternalProducts(trending) : []);
+      } catch (err) {
+        if (cancelled) return;
+        console.warn('Trending product sync failed', err);
+        setTrendingError((err as Error)?.message || 'Unable to load trending products');
+      } finally {
+        if (!cancelled) {
+          setIsLoadingTrending(false);
+        }
+      }
+    };
+
+    void loadTrendingProducts();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadBestSellerProducts = async () => {
+      try {
+        setIsLoadingBestSellers(true);
+        setBestSellersError(null);
+        const bestSellers = await apiGetBestSellerProducts();
+        if (cancelled) return;
+        setBestSellerProducts(Array.isArray(bestSellers) ? normalizeExternalProducts(bestSellers) : []);
+      } catch (err) {
+        if (cancelled) return;
+        console.warn('Best-seller product sync failed', err);
+        setBestSellersError((err as Error)?.message || 'Unable to load best-seller products');
+      } finally {
+        if (!cancelled) {
+          setIsLoadingBestSellers(false);
+        }
+      }
+    };
+
+    void loadBestSellerProducts();
 
     return () => {
       cancelled = true;
@@ -426,6 +490,76 @@ const AppWorkspace: React.FC = () => {
                 <h2 className="mb-2 text-3xl font-bold capitalize text-white">{currentView}</h2>
                 <p className="text-slate-400">{viewSummary}</p>
               </div>
+
+              {currentView === 'dashboard' && (
+                <div className="mb-8">
+                  <div className="mb-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Flame size={18} className="text-amz-accent" />
+                      <h3 className="text-lg font-bold text-white">Trending Now</h3>
+                    </div>
+                    {isLoadingTrending && <Loader2 size={14} className="animate-spin text-slate-500" />}
+                  </div>
+
+                  {trendingError ? (
+                    <div className="rounded-xl border border-slate-800 bg-slate-900/40 px-4 py-3 text-sm text-slate-500">
+                      Trending unavailable: {trendingError}
+                    </div>
+                  ) : trendingProducts.length > 0 ? (
+                    <div className="flex gap-4 overflow-x-auto pb-2">
+                      {trendingProducts.map((product) => (
+                        <div key={product.id} className="w-56 shrink-0">
+                          <ProductCard
+                            product={product}
+                            onClick={setSelectedProduct}
+                            isSaved={savedIds.has(product.id)}
+                            onToggleSave={handleToggleSave}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  ) : !isLoadingTrending ? (
+                    <div className="rounded-xl border border-dashed border-slate-800 bg-slate-900/40 px-4 py-6 text-center text-sm text-slate-500">
+                      No trending data yet. Set <code className="font-mono text-slate-400">TRENDING_CATEGORY_URL</code> on the server to pick a category.
+                    </div>
+                  ) : null}
+                </div>
+              )}
+
+              {currentView === 'dashboard' && (
+                <div className="mb-8">
+                  <div className="mb-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Trophy size={18} className="text-amz-accent" />
+                      <h3 className="text-lg font-bold text-white">All-Time Best Sellers</h3>
+                    </div>
+                    {isLoadingBestSellers && <Loader2 size={14} className="animate-spin text-slate-500" />}
+                  </div>
+
+                  {bestSellersError ? (
+                    <div className="rounded-xl border border-slate-800 bg-slate-900/40 px-4 py-3 text-sm text-slate-500">
+                      Best sellers unavailable: {bestSellersError}
+                    </div>
+                  ) : bestSellerProducts.length > 0 ? (
+                    <div className="flex gap-4 overflow-x-auto pb-2">
+                      {bestSellerProducts.map((product) => (
+                        <div key={product.id} className="w-56 shrink-0">
+                          <ProductCard
+                            product={product}
+                            onClick={setSelectedProduct}
+                            isSaved={savedIds.has(product.id)}
+                            onToggleSave={handleToggleSave}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  ) : !isLoadingBestSellers ? (
+                    <div className="rounded-xl border border-dashed border-slate-800 bg-slate-900/40 px-4 py-6 text-center text-sm text-slate-500">
+                      No best-seller data yet. Set <code className="font-mono text-slate-400">BESTSELLERS_CATEGORY_URL</code> on the server to pick a category.
+                    </div>
+                  ) : null}
+                </div>
+              )}
 
               <FilterBar filters={filters} setFilters={setFilters} />
 

@@ -96,6 +96,51 @@ export const fetchAmazonProducts = async (values, env = process.env) => {
 export const getFeaturedAsins = (env = process.env) =>
   normalizeAsins(valueFromEnv(env, ['FEATURED_ASINS', 'AMAZON_FEATURED_ASINS']));
 
+// Amazon's site-wide /gp/bestsellers is a category-index page, not an actual ranked
+// list — Rainforest parses it "successfully" but returns zero items. A real
+// Best-Sellers-<Department>/zgbs/<slug> category page is required instead (verified
+// live for Electronics). Amazon's genuinely volatile "Movers & Shakers" list needs a
+// numeric browse-node id per category that wasn't reachable to verify live, so both
+// rails below use the steadier zgbs Best Sellers endpoint against two different
+// default categories rather than guess at an unverified node id.
+const DEFAULT_RAIL_LIMIT = 12;
+const DEFAULT_TRENDING_CATEGORY_URL = 'https://www.amazon.com/Best-Sellers-Electronics/zgbs/electronics';
+const DEFAULT_BESTSELLERS_CATEGORY_URL = 'https://www.amazon.com/Best-Sellers-Toys-Games/zgbs/toys-and-games';
+
+// Bestsellers discovery is Rainforest-specific for now — it's the only configured
+// provider with a ranked-category endpoint (Keepa has an equivalent but isn't wired up
+// here yet), so this doesn't go through the multi-provider fallback chain
+// fetchAmazonProducts uses for per-ASIN lookups.
+const getBestsellersRail = async (env, { label, categoryEnvKey, defaultUrl, limitEnvKey }) => {
+  if (!rainforestProvider.isConfigured(env)) {
+    throw new HttpError(
+      503,
+      `${label} require the Rainforest provider. Set RAINFOREST_API_KEY on the server (Keepa's equivalent bestsellers endpoint isn't wired up yet).`
+    );
+  }
+
+  const categoryUrl = valueFromEnv(env, [categoryEnvKey]) || defaultUrl;
+  const limit = Number(valueFromEnv(env, [limitEnvKey])) || DEFAULT_RAIL_LIMIT;
+
+  return rainforestProvider.fetchBestsellers(categoryUrl, { limit }, env);
+};
+
+export const getTrendingProducts = (env = process.env) =>
+  getBestsellersRail(env, {
+    label: 'Trending products',
+    categoryEnvKey: 'TRENDING_CATEGORY_URL',
+    defaultUrl: DEFAULT_TRENDING_CATEGORY_URL,
+    limitEnvKey: 'TRENDING_LIMIT'
+  });
+
+export const getBestSellerProducts = (env = process.env) =>
+  getBestsellersRail(env, {
+    label: 'Best-seller products',
+    categoryEnvKey: 'BESTSELLERS_CATEGORY_URL',
+    defaultUrl: DEFAULT_BESTSELLERS_CATEGORY_URL,
+    limitEnvKey: 'BESTSELLERS_LIMIT'
+  });
+
 export const handleAmazonApiRequest = async (req, res, env = process.env) => {
   const url = new URL(req.url || '/', 'http://localhost');
   const path = url.pathname;
@@ -110,6 +155,20 @@ export const handleAmazonApiRequest = async (req, res, env = process.env) => {
       }
 
       const products = await fetchAmazonProducts(asins, env);
+      sendJson(res, 200, products);
+      return true;
+    }
+
+    if (req.method === 'GET' && path === '/api/products/trending') {
+      checkRateLimit(req, RATE_LIMITS.trending);
+      const products = await getTrendingProducts(env);
+      sendJson(res, 200, products);
+      return true;
+    }
+
+    if (req.method === 'GET' && path === '/api/products/bestsellers') {
+      checkRateLimit(req, RATE_LIMITS.bestsellers);
+      const products = await getBestSellerProducts(env);
       sendJson(res, 200, products);
       return true;
     }
