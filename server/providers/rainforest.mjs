@@ -1,5 +1,5 @@
 import { HttpError } from '../http.mjs';
-import { blankProduct, toNumber, valueFromEnv } from './shared.mjs';
+import { blankProduct, fetchWithRetry, toNumber, valueFromEnv } from './shared.mjs';
 
 // https://www.rainforestapi.com/docs/product-data-api/reference/product-request
 // Field mapping verified 2026-07-23 against a live `type=product` response.
@@ -59,7 +59,7 @@ const mapResultToProduct = (product, asin) => {
 
 const fetchOne = async (asin, apiKey, amazonDomain) => {
   const url = `${RAINFOREST_BASE}?api_key=${encodeURIComponent(apiKey)}&type=product&amazon_domain=${encodeURIComponent(amazonDomain)}&asin=${encodeURIComponent(asin)}`;
-  const response = await fetch(url);
+  const response = await fetchWithRetry(url);
   const payload = await response.json().catch(() => ({}));
 
   if (!response.ok || payload?.request_info?.success === false) {
@@ -108,7 +108,7 @@ export const fetchBestsellers = async (categoryUrl, { limit = DEFAULT_BESTSELLER
   }
 
   const url = `${RAINFOREST_BASE}?api_key=${encodeURIComponent(apiKey)}&type=bestsellers&url=${encodeURIComponent(categoryUrl)}`;
-  const response = await fetch(url);
+  const response = await fetchWithRetry(url);
   const payload = await response.json().catch(() => ({}));
 
   if (!response.ok || payload?.request_info?.success === false) {

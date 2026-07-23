@@ -1,5 +1,25 @@
 export const ASIN_PATTERN = /^[A-Z0-9]{10}$/;
 
+// Retries only transient network-level failures (DNS blips, connection resets — the
+// kind of thing that fails one moment and succeeds the next) with exponential backoff.
+// An actual HTTP error response (4xx/5xx) is returned as-is, not retried, since the
+// caller already handles those; only a thrown fetch() (network layer never completed)
+// is worth retrying here.
+export const fetchWithRetry = async (url, options = {}, { retries = 2, baseDelayMs = 300 } = {}) => {
+  let lastError;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await fetch(url, options);
+    } catch (error) {
+      lastError = error;
+      if (attempt < retries) {
+        await new Promise((resolve) => setTimeout(resolve, baseDelayMs * 2 ** attempt));
+      }
+    }
+  }
+  throw lastError;
+};
+
 export const valueFromEnv = (env, keys) => {
   for (const key of keys) {
     const value = env?.[key];
