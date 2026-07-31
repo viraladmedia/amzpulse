@@ -59,6 +59,7 @@ const FilterBar: React.FC<FilterBarProps> = ({ filters, setFilters }) => {
             <input
                 type="text"
                 name="search"
+                data-tour="tour-search"
                 placeholder="Search ASIN, Title, Brand..."
                 value={filters.search}
                 onChange={handleInputChange}

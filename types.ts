@@ -92,4 +92,4 @@ export interface FilterState {
   season?: string; // New
 }
 
-export type ViewMode = 'dashboard' | 'research' | 'batch' | 'watchlist' | 'settings';
+export type ViewMode = 'dashboard' | 'research' | 'batch' | 'watchlist' | 'referrals' | 'rewards' | 'settings';

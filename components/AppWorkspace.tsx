@@ -1,9 +1,29 @@
 import React, { Suspense, lazy, useDeferredValue, useEffect, useMemo, useState } from 'react';
-import { CreditCard, Flame, Loader2, LogIn, LogOut, Menu, Shield, Sparkles, Trophy, UserPlus } from 'lucide-react';
+import {
+  Check,
+  Copy,
+  CreditCard,
+  Flame,
+  Gift,
+  Heart,
+  Loader2,
+  LogIn,
+  LogOut,
+  Menu,
+  Search,
+  Share2,
+  Shield,
+  Sparkles,
+  Trophy,
+  UserPlus
+} from 'lucide-react';
 import { FilterState, Product, ViewMode } from '../types';
+import EmptyState from './EmptyState';
 import FilterBar from './FilterBar';
+import OnboardingTour, { ONBOARDING_STORAGE_KEY } from './OnboardingTour';
 import { ProductCard } from './ProductCard';
 import Sidebar from './Sidebar';
+import Tooltip from './Tooltip';
 import { normalizeExternalProduct, normalizeExternalProducts } from '../services/productMapper';
 import {
   addToWatchlist,
@@ -73,6 +93,8 @@ const AppWorkspace: React.FC = () => {
   const [bestSellerProducts, setBestSellerProducts] = useState<Product[]>([]);
   const [isLoadingBestSellers, setIsLoadingBestSellers] = useState(false);
   const [bestSellersError, setBestSellersError] = useState<string | null>(null);
+  const [isTourOpen, setIsTourOpen] = useState(false);
+  const [referralLinkCopied, setReferralLinkCopied] = useState(false);
 
   const deferredSearch = useDeferredValue(filters.search.trim());
   const canManageBilling = role === 'owner' || role === 'admin';
@@ -175,6 +197,45 @@ const AppWorkspace: React.FC = () => {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!localStorage.getItem(ONBOARDING_STORAGE_KEY)) {
+      setView('dashboard');
+      setIsTourOpen(true);
+    }
+  }, []);
+
+  const startTour = () => {
+    setView('dashboard');
+    setIsTourOpen(true);
+  };
+
+  // Deterministic, non-cryptographic short code from the account email — good enough for
+  // a shareable link; real invite tracking and reward crediting still need a backend.
+  const hashToCode = (value: string) => {
+    let hash = 0;
+    for (let i = 0; i < value.length; i++) {
+      hash = (hash << 5) - hash + value.charCodeAt(i);
+      hash |= 0;
+    }
+    return Math.abs(hash).toString(36);
+  };
+
+  const referralLink =
+    typeof window !== 'undefined' && userEmail
+      ? `${window.location.origin}${window.location.pathname}#/?ref=${hashToCode(userEmail)}`
+      : '';
+
+  const copyReferralLink = async () => {
+    if (!referralLink) return;
+    try {
+      await navigator.clipboard.writeText(referralLink);
+      setReferralLinkCopied(true);
+      setTimeout(() => setReferralLinkCopied(false), 2000);
+    } catch (err) {
+      console.warn('Copy referral link failed', err);
+    }
+  };
 
   const bootstrapSession = async () => {
     try {
@@ -470,13 +531,16 @@ const AppWorkspace: React.FC = () => {
         setIsOpen={setIsSidebarOpen}
         isAuthenticated={Boolean(token)}
         onLogout={handleLogout}
+        onStartTour={startTour}
       />
 
       <div className="flex min-h-screen flex-col transition-all duration-300 md:ml-64">
         <header className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-800 bg-slate-900/70 p-4 backdrop-blur md:hidden">
-          <button onClick={() => setIsSidebarOpen(true)} className="p-2 text-white">
-            <Menu size={24} />
-          </button>
+          <Tooltip label="Open menu">
+            <button onClick={() => setIsSidebarOpen(true)} className="p-2 text-white">
+              <Menu size={24} />
+            </button>
+          </Tooltip>
           <span className="font-semibold text-white">AmzPulse Workspace</span>
           <div className="w-8" />
         </header>
@@ -493,7 +557,7 @@ const AppWorkspace: React.FC = () => {
 
               {currentView === 'dashboard' && (
                 <div className="mb-8">
-                  <div className="mb-3 flex items-center justify-between">
+                  <div className="mb-3 flex items-center justify-between" data-tour="tour-trending">
                     <div className="flex items-center gap-2">
                       <Flame size={18} className="text-amz-accent" />
                       <h3 className="text-lg font-bold text-white">Trending Now</h3>
@@ -519,9 +583,12 @@ const AppWorkspace: React.FC = () => {
                       ))}
                     </div>
                   ) : !isLoadingTrending ? (
-                    <div className="rounded-xl border border-dashed border-slate-800 bg-slate-900/40 px-4 py-6 text-center text-sm text-slate-500">
-                      No trending data yet. Set <code className="font-mono text-slate-400">TRENDING_CATEGORY_URL</code> on the server to pick a category.
-                    </div>
+                    <EmptyState
+                      icon={Flame}
+                      title="No trending data yet"
+                      description="This rail pulls a live Amazon bestsellers category through Rainforest."
+                      tip="Set TRENDING_CATEGORY_URL on the server to pick a category."
+                    />
                   ) : null}
                 </div>
               )}
@@ -554,9 +621,12 @@ const AppWorkspace: React.FC = () => {
                       ))}
                     </div>
                   ) : !isLoadingBestSellers ? (
-                    <div className="rounded-xl border border-dashed border-slate-800 bg-slate-900/40 px-4 py-6 text-center text-sm text-slate-500">
-                      No best-seller data yet. Set <code className="font-mono text-slate-400">BESTSELLERS_CATEGORY_URL</code> on the server to pick a category.
-                    </div>
+                    <EmptyState
+                      icon={Trophy}
+                      title="No best-seller data yet"
+                      description="This rail pulls a live Amazon bestsellers category through Rainforest."
+                      tip="Set BESTSELLERS_CATEGORY_URL on the server to pick a category."
+                    />
                   ) : null}
                 </div>
               )}
@@ -594,10 +664,30 @@ const AppWorkspace: React.FC = () => {
                       />
                     ))}
                   </div>
+                ) : currentView === 'watchlist' ? (
+                  <EmptyState
+                    icon={Heart}
+                    title="Your watchlist is empty"
+                    description="Save any product from Dashboard or Research with the heart icon and it shows up here."
+                    action={
+                      !token
+                        ? {
+                            label: 'Login to sync a watchlist',
+                            onClick: () => {
+                              setAuthMode('login');
+                              setShowAuthModal(true);
+                            }
+                          }
+                        : undefined
+                    }
+                  />
                 ) : (
-                  <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-900/50 py-20 text-center text-slate-500">
-                    No products found. Search a live ASIN or configure `FEATURED_ASINS` in the server environment to seed the dashboard.
-                  </div>
+                  <EmptyState
+                    icon={Search}
+                    title="No products yet"
+                    description="Search a live ASIN above, or browse Trending Now and All-Time Best Sellers to get started."
+                    tip="Configure FEATURED_ASINS on the server to seed this view automatically."
+                  />
                 )}
               </div>
             </>
@@ -656,6 +746,66 @@ const AppWorkspace: React.FC = () => {
                 </div>
               </div>
             ))}
+
+          {currentView === 'referrals' && (
+            <div className="mx-auto max-w-2xl">
+              <div className="rounded-2xl border border-slate-800 bg-slate-900 p-8">
+                <div className="mb-4 inline-flex rounded-full bg-amz-accent/15 p-3 text-amz-accent">
+                  <Share2 size={22} />
+                </div>
+                <h2 className="text-2xl font-bold text-white">Invite your team</h2>
+                <p className="mt-2 text-sm text-slate-400">
+                  Share your personal invite link. Anyone who signs up through it starts their own workspace.
+                </p>
+
+                {token ? (
+                  <>
+                    <div className="mt-6 flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-950/60 p-3">
+                      <code className="flex-1 truncate text-sm text-slate-300">{referralLink}</code>
+                      <button
+                        onClick={copyReferralLink}
+                        className="flex shrink-0 items-center gap-1.5 rounded-lg bg-amz-accent px-3 py-2 text-xs font-bold text-slate-900 transition hover:bg-orange-500"
+                      >
+                        {referralLinkCopied ? <Check size={14} /> : <Copy size={14} />}
+                        {referralLinkCopied ? 'Copied' : 'Copy'}
+                      </button>
+                    </div>
+                    <p className="mt-3 text-xs text-slate-500">
+                      Invite tracking and reward crediting aren&apos;t wired up on the backend yet — this link is ready to
+                      share, but signups through it won&apos;t be credited to you automatically until that ships.
+                    </p>
+                  </>
+                ) : (
+                  <div className="mt-6">
+                    <EmptyState
+                      icon={Share2}
+                      title="Sign in to get your invite link"
+                      description="Each workspace account gets its own shareable referral link."
+                      action={{
+                        label: 'Login',
+                        onClick: () => {
+                          setAuthMode('login');
+                          setShowAuthModal(true);
+                        }
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {currentView === 'rewards' && (
+            <div className="mx-auto max-w-2xl">
+              <EmptyState
+                icon={Gift}
+                title="Rewards are coming soon"
+                description="Earn perks for inviting teammates and hitting research milestones. Points and redemption aren't live yet."
+                tip="Referrals already work — share your link from the Referrals page so you're ready when rewards launch."
+                className="bg-slate-900"
+              />
+            </div>
+          )}
 
           {currentView === 'settings' && (
             <div className="mx-auto max-w-2xl rounded-2xl border border-slate-800 bg-slate-900 p-8">
@@ -723,6 +873,8 @@ const AppWorkspace: React.FC = () => {
           />
         </Suspense>
       )}
+
+      <OnboardingTour isOpen={isTourOpen} onClose={() => setIsTourOpen(false)} />
     </div>
   );
 };

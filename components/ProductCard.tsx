@@ -1,6 +1,7 @@
 import React from 'react';
 import { TrendingUp, Star, BarChart2, Package, Heart, Diamond } from 'lucide-react';
 import { Product } from '../types';
+import Tooltip from './Tooltip';
 
 interface ProductCardProps {
   product: Product;
@@ -60,13 +61,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, isSa
             </div>
         </div>
         
-        <button 
-            onClick={(e) => onToggleSave(e, product.id)}
-            aria-label={isSaved ? `Remove ${product.name} from watchlist` : `Save ${product.name} to watchlist`}
-            className="absolute top-2 right-2 z-20 p-2 bg-slate-100/50 hover:bg-white rounded-full transition-colors shadow-sm"
-        >
-            <Heart size={16} className={isSaved ? "fill-pink-500 text-pink-500" : "text-slate-600"} />
-        </button>
+        <Tooltip label={isSaved ? 'Remove from watchlist' : 'Save to watchlist'} side="left" className="absolute top-2 right-2 z-20 inline-flex">
+          <button
+              onClick={(e) => onToggleSave(e, product.id)}
+              aria-label={isSaved ? `Remove ${product.name} from watchlist` : `Save ${product.name} to watchlist`}
+              className="p-2 bg-slate-100/50 hover:bg-white rounded-full transition-colors shadow-sm"
+          >
+              <Heart size={16} className={isSaved ? "fill-pink-500 text-pink-500" : "text-slate-600"} />
+          </button>
+        </Tooltip>
         
         {/* Hover Overlay */}
         <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[1px]">

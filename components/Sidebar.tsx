@@ -1,6 +1,7 @@
 import React from 'react';
-import { LayoutDashboard, Search, Layers, Heart, Settings, Zap, LogOut } from 'lucide-react';
+import { LayoutDashboard, Search, Layers, Heart, Share2, Gift, Settings, Zap, LogOut, HelpCircle } from 'lucide-react';
 import { ViewMode } from '../types';
+import Tooltip from './Tooltip';
 
 interface SidebarProps {
   currentView: ViewMode;
@@ -9,6 +10,7 @@ interface SidebarProps {
   setIsOpen: (isOpen: boolean) => void;
   isAuthenticated?: boolean;
   onLogout?: () => void;
+  onStartTour?: () => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -17,13 +19,16 @@ const Sidebar: React.FC<SidebarProps> = ({
   isOpen,
   setIsOpen,
   isAuthenticated = false,
-  onLogout
+  onLogout,
+  onStartTour
 }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'research', label: 'Research', icon: Search },
     { id: 'batch', label: 'Batch Analysis', icon: Layers },
     { id: 'watchlist', label: 'Watchlist', icon: Heart },
+    { id: 'referrals', label: 'Referrals', icon: Share2 },
+    { id: 'rewards', label: 'Rewards', icon: Gift },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
@@ -56,6 +61,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     return (
                         <button
                             key={item.id}
+                            data-tour={`tour-${item.id}`}
                             onClick={() => {
                                 setView(item.id as ViewMode);
                                 setIsOpen(false); // Close on mobile select
@@ -67,6 +73,21 @@ const Sidebar: React.FC<SidebarProps> = ({
                         </button>
                     );
                 })}
+
+                {onStartTour && (
+                    <Tooltip label="Replay the guided tour" side="right" className="flex w-full">
+                        <button
+                            onClick={() => {
+                                onStartTour();
+                                setIsOpen(false);
+                            }}
+                            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-500 transition-all hover:bg-slate-800 hover:text-white"
+                        >
+                            <HelpCircle size={18} className="text-slate-500" />
+                            Take a tour
+                        </button>
+                    </Tooltip>
+                )}
             </nav>
 
             {isAuthenticated && onLogout && (
